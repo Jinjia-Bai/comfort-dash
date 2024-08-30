@@ -2,7 +2,6 @@ import platform
 from enum import Enum
 from pydantic import BaseModel
 
-
 class Dimensions(Enum):
     default_container_width = "md"
 
@@ -143,10 +142,10 @@ class PmvENResultCard(Enum):
 
 class PhsResultCard(Enum):
     line1: str = "Maximum allowable exposure time within which the physiological strain is acceptable (no physical damage is to be expected) calculated as a function of:"
-    line2: str = "max rectal temperature = 53 min"
-    line3: str = "water loss of 5% of the body mass for 95% of the population = 256 min"
-    line4: str = "water loss of 7.5% of the body mass for an average person = 380 min"
-
+    line2: str = "max rectal temperature = t_re °C"
+    line3: str = "water loss of 5% of the body mass for 95% of the population = d_lim_loss_95 min"
+    line4: str = "water loss of 7.5% of the body mass for an average person = d_lim_loss_50 min"
+    
 class ModelInputsInfo(BaseModel):
     name: str
     unit: str
@@ -259,7 +258,15 @@ class ModelInputsAdaptiveAshrae55(BaseModel):
         max=40.0,
         step=0.1,
         value=25.0,
-        name="Prevailing mean outdoor temperature",
+        name="Mean Radiant Temperature",
+    )
+    RUNNING_MEAN_OUTDOOR_TEMPERATURE: ModelInputsInfo = ModelInputsInfo(
+        unit="°C",
+        min=10.0,
+        max=40.0,
+        step=0.1,
+        value=25.0,
+        name="Running Mean Outdoor Temperature",
     )
 
 class ModelInputsSelectionSpeedASHRAE55(Enum):
@@ -324,7 +331,7 @@ class ModelInputsSelectionClothingFansAndHeat(Enum):
 
 class ModelInputsSelectionMetablicRatePhs(Enum):
     h_1: str = "Sleeping: 0.7"
-    h_2: str = "Reclining"
+    h_2: str = "Reclining: 0.8"
     h_3: str = "Seated, quite: 1.0"
     h_4: str = "Reading, seated: 1.0"
     h_5: str = "Writing: 1.0"
@@ -378,9 +385,15 @@ class ModelInputsPhs(BaseModel):
         unit="%", min=0.0, max=100.0, step=1.0, value=50.0, name="Relative Humidity"
     )
     MET: ModelInputsInfo = ModelInputsInfo(
-        unit="met", min=0.7, max=2.0, step=0.1, value=1.2, name="Metabolic Rate"
+        unit="W/(m2)", min=0.7, max=2.0, step=0.1, value=1.2, name="Metabolic Rate"
     )
     CLOTHING: ModelInputsInfo = ModelInputsInfo(
         unit="clo", min=0.5, max=2.0, step=0.1, value=0.5, name="Clothing"
+    )
+    POSTURE: ModelInputsInfo = ModelInputsInfo(
+        unit="", min=1, max=3, step=1, value=1, name="Posture [sitting=1, standing=2, crouching=3]"
+    )
+    WME: ModelInputsInfo = ModelInputsInfo(
+        unit="W/(m2)", min=0, max=10.0, step=0.1, value=0, name="wme"
     )
 

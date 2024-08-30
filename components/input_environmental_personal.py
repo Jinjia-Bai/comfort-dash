@@ -55,6 +55,7 @@ def input_environmental_personal(selected_model):
 
     for var_name, values in dict(model_inputs).items():
         input_filed = dmc.NumberInput(
+            id=f"{selected_model}-{var_name}-input",
             label=values.name,
             description=f"From {values.min} to {values.max}",
             value=values.value,

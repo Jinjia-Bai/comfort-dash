@@ -16,7 +16,7 @@ from utils.my_config_file import (
 )
 from utils.website_text import app_name
 
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from components.dropdowns import dd_model
 from components.input_environmental_personal import input_environmental_personal
 from components.dropdowns import chart_selection
@@ -27,7 +27,10 @@ from utils.my_config_file import (
     PmvAshraeResultCard,
     PmvENResultCard,
     PhsResultCard,
+    ModelInputsPhs,
 )
+
+from components.models import CalculatePHS
 
 install()
 # from components.dropdowns import Ash55_air_speed_selection
@@ -68,7 +71,7 @@ app = Dash(
     external_scripts=["https://cdn.plot.ly/plotly-basic-2.26.2.min.js"],
     prevent_initial_callbacks=True,
     use_pages=True,
-    serve_locally=False,
+    serve_locally=True,
 )
 app.config.suppress_callback_exceptions = True
 
@@ -181,20 +184,34 @@ app.layout = dmc.MantineProvider(
 
 
 @app.callback(
-    Output("input_card", "children"),
-    Output("graph-container", "children"),
-    Output("chart-select", "children"),
-    Output("graph-container", "cols"),
-    Input(dd_model["id"], "value"),
+    [Output("input_card", "children"),
+    #Output("graph-container", "children"),
+    Output("chart-select", "children")],
+    #Output("graph-container", "cols"),
+    Input(dd_model["id"], "value")
 )
 def capture_selected_model(selected_model):
-    print(selected_model)
+    #print(selected_model)
     input_content = input_environmental_personal(selected_model)
-    graph_content = update_graph_content(selected_model)
+    #graph_content = update_graph_content(selected_model)
     chart_content = chart_selection(selected_model)
-    result_content = change_cols(selected_model)
+    #result_content = change_cols(selected_model)
 
-    return input_content, graph_content, chart_content, result_content
+    return input_content, chart_content
+
+@app.callback(
+    [Output("graph-container", "children"),
+    Output("graph-container", "cols")],
+    [Input(dd_model["id"], "value")]+
+    [Input(f"{MODELS.Phs.value}-{var_name}-input", "value") for var_name in ModelInputsPhs.model_fields.keys()],
+)
+def capture_input_values(selected_model, *input_values):
+    #print(f"2 {selected_model}")
+    print(input_values)
+    
+    graph_content = update_graph_content(selected_model, *input_values)
+    result_content = change_cols(selected_model)
+    return graph_content, result_content
 
 
 def change_cols(selected_model):
@@ -209,7 +226,7 @@ def change_cols(selected_model):
     return cols
 
 
-def update_graph_content(selected_model):
+def update_graph_content(selected_model, *input_states):
 
     if selected_model == MODELS.Adaptive_EN.value:
         grid_content = [
@@ -243,11 +260,17 @@ def update_graph_content(selected_model):
         ]
 
     elif selected_model == MODELS.Phs.value:
+        t_re, d_lim_loss_50, d_lim_loss_95 = CalculatePHS(*input_states)
+        print(t_re, d_lim_loss_50, d_lim_loss_95)
         grid_content = [
-            dmc.Center(dmc.Text(PhsResultCard.line1.value)),
-            dmc.Center(dmc.Text(PhsResultCard.line2.value)),
-            dmc.Center(dmc.Text(PhsResultCard.line3.value)),
-            dmc.Center(dmc.Text(PhsResultCard.line4.value)),
+            f"Maximum allowable exposure time within which the physiological strain is acceptable (no physical damage is to be expected) calculated as a function of:"
+            f"max rectal temperature = {t_re} °C"
+            f"water loss of 5% of the body mass for 95% of the population = {d_lim_loss_95} min"
+            f"water loss of 7.5% of the body mass for an average person = {d_lim_loss_50} min"
+            #dmc.Center(dmc.Text(PhsResultCard.line1.value)),
+            #dmc.Center(dmc.Text(PhsResultCard.line2.value.format(t_re=t_re))),
+            #dmc.Center(dmc.Text(PhsResultCard.line3.value.format(d_lim_loss_95=d_lim_loss_95))),
+            #dmc.Center(dmc.Text(PhsResultCard.line4.value.format(d_lim_loss_50=d_lim_loss_50))),
         ]
 
     return grid_content
@@ -260,7 +283,7 @@ def update_graph_content(selected_model):
 
 if __name__ == "__main__":
     app.run_server(
-        debug=Config.DEBUG.value,
+        debug=True,
         host="127.0.0.1",
         port=os.environ.get("PORT_APP", 9090),
         processes=1,
