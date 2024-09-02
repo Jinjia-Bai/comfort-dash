@@ -1,17 +1,9 @@
-from pythermalcomfort.models import adaptive_ashrae, adaptive_en, phs
+import pythermalcomfort.models as ptcm
 
-#from pythermalcomfort.utilities import running_mean_outdoor_temperature
-
-#t_running_mean = running_mean_outdoor_temperature(temp_array, alpha=0.8, units='IS')
-
-#results = adaptive_ashrae(tdb=AIR_TEMPERATURE, tr=MRT, t_running_mean=RUNNING_MEAN_OUTDOOR_TEMPERATURE, v=ElementsIDs.SPEED_SELECTION)
-#print(results)
-
-#results = adaptive_en(tdb=AIR_TEMPERATURE, tr=MRT, t_running_mean=RUNNING_MEAN_OUTDOOR_TEMPERATURE, v=ElementsIDs.SPEED_SELECTION)
-#print(results)
-
-def CalculatePHS(AIR_TEMPERATURE, MRT, AIR_SPEED, RH, MET, COLTHING, POSTURE, WME):
-    result = phs(tdb=AIR_TEMPERATURE, tr=MRT, rh=RH, v=AIR_SPEED, met=MET, clo=COLTHING, posture=POSTURE, wme=WME)
+def CalculatePHS(AIR_TEMPERATURE, MRT, AIR_SPEED, RH, MET, CLOTHING, POSTURE, WME):
+    print(f"Calculating PHS with: AIR_TEMPERATURE={AIR_TEMPERATURE}, MRT={MRT}, AIR_SPEED={AIR_SPEED}, RH={RH}, MET={MET}, CLOTHING={CLOTHING}, POSTURE={POSTURE}, WME={WME}")
+    POSTURE = int(POSTURE)
+    result = ptcm.phs(tdb=AIR_TEMPERATURE, tr=MRT, rh=RH, v=AIR_SPEED, met=MET, clo=CLOTHING, posture=POSTURE, wme=WME)
     print(f"phs result: {result}")
     t_re = result['t_re']
     d_lim_loss_50 = result['d_lim_loss_50']

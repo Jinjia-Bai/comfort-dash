@@ -27,10 +27,16 @@ from utils.my_config_file import (
     PmvAshraeResultCard,
     PmvENResultCard,
     PhsResultCard,
+    ModelInputsPmvAshrae55,
+    ModelInputsPmvEN16798,
+    ModelInputsAdaptiveEN16798,
+    ModelInputsAdaptiveAshrae55,
+    ModelInputsFANSHEAT,
     ModelInputsPhs,
 )
 
 from components.models import CalculatePHS
+from math import isnan
 
 install()
 # from components.dropdowns import Ash55_air_speed_selection
@@ -143,6 +149,7 @@ app.layout = dmc.MantineProvider(
         [
             my_navbar(),
             dcc.Location(id=ElementsIDs.URL.value),
+            #dcc.Store(id="store-selected-model", storage_type="memory"),
             dcc.Store(id=Stores.INPUT_DATA.value, storage_type="local"),
             html.Div(
                 dmc.Container(
@@ -185,33 +192,32 @@ app.layout = dmc.MantineProvider(
 
 @app.callback(
     [Output("input_card", "children"),
-    #Output("graph-container", "children"),
-    Output("chart-select", "children")],
-    #Output("graph-container", "cols"),
+     Output("chart-select", "children"),
+     #Output("store-selected-model", "data")
+     Output("graph-container", "cols")],
     Input(dd_model["id"], "value")
 )
 def capture_selected_model(selected_model):
-    #print(selected_model)
+    print(f"Selected Model: {selected_model}")
     input_content = input_environmental_personal(selected_model)
-    #graph_content = update_graph_content(selected_model)
     chart_content = chart_selection(selected_model)
-    #result_content = change_cols(selected_model)
+    result_content = change_cols(selected_model)
 
-    return input_content, chart_content
+    return input_content, chart_content, result_content
 
 @app.callback(
-    [Output("graph-container", "children"),
-    Output("graph-container", "cols")],
-    [Input(dd_model["id"], "value")]+
+    [Output("graph-container", "children")],
+    [Input(dd_model["id"], "value")] +
     [Input(f"{MODELS.Phs.value}-{var_name}-input", "value") for var_name in ModelInputsPhs.model_fields.keys()],
+    #Input("store-selected-model", "data"),
+    #State("store-selected-model", "data"),
 )
 def capture_input_values(selected_model, *input_values):
-    #print(f"2 {selected_model}")
-    print(input_values)
+    print(f"Model: {selected_model}")
+    print(f"Input Values: {input_values}")
     
     graph_content = update_graph_content(selected_model, *input_values)
-    result_content = change_cols(selected_model)
-    return graph_content, result_content
+    return [graph_content]
 
 
 def change_cols(selected_model):
@@ -260,18 +266,25 @@ def update_graph_content(selected_model, *input_states):
         ]
 
     elif selected_model == MODELS.Phs.value:
-        t_re, d_lim_loss_50, d_lim_loss_95 = CalculatePHS(*input_states)
-        print(t_re, d_lim_loss_50, d_lim_loss_95)
-        grid_content = [
-            f"Maximum allowable exposure time within which the physiological strain is acceptable (no physical damage is to be expected) calculated as a function of:"
-            f"max rectal temperature = {t_re} °C"
-            f"water loss of 5% of the body mass for 95% of the population = {d_lim_loss_95} min"
-            f"water loss of 7.5% of the body mass for an average person = {d_lim_loss_50} min"
-            #dmc.Center(dmc.Text(PhsResultCard.line1.value)),
-            #dmc.Center(dmc.Text(PhsResultCard.line2.value.format(t_re=t_re))),
-            #dmc.Center(dmc.Text(PhsResultCard.line3.value.format(d_lim_loss_95=d_lim_loss_95))),
-            #dmc.Center(dmc.Text(PhsResultCard.line4.value.format(d_lim_loss_50=d_lim_loss_50))),
-        ]
+        print(f"Received Input States: {input_states}")
+
+        if any(x is None or (isinstance(x, float) and isnan(x)) for x in input_states):
+            print("Invalid input values detected, skipping calculation.")
+            return [dmc.Text("Invalid inputs, unable to calculate PHS.")], 1
+
+        try:
+            t_re, d_lim_loss_50, d_lim_loss_95 = CalculatePHS(*input_states)
+            print(f"Calculation Results - t_re: {t_re}, d_lim_loss_50: {d_lim_loss_50}, d_lim_loss_95: {d_lim_loss_95}")
+
+            grid_content = [
+                dmc.Center(dmc.Text(PhsResultCard.line1.value)),
+                dmc.Center(dmc.Text(PhsResultCard.line2.value.replace("t_re", f"{t_re:.1f}"))),
+                dmc.Center(dmc.Text(PhsResultCard.line3.value.replace("d_lim_loss_95", f"{d_lim_loss_95:.1f}"))),
+                dmc.Center(dmc.Text(PhsResultCard.line4.value.replace("d_lim_loss_50", f"{d_lim_loss_50:.1f}"))),
+            ]
+        except Exception as e:
+            print(f"Error during calculation: {e}")
+            grid_content = [dmc.Text("Error in calculating PHS.")]
 
     return grid_content
 

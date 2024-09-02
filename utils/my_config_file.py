@@ -368,32 +368,32 @@ class ModelInputsFANSHEAT(BaseModel):
 
 class ModelInputsPhs(BaseModel):
     AIR_TEMPERATURE: ModelInputsInfo = ModelInputsInfo(
-        unit="°C", min=10.0, max=40.0, step=0.1, value=25.0, name="Air Temperature"
+        unit="°C", min=15.0, max=50.0, step=0.1, value=25.0, name="Air Temperature"
     )
     MRT: ModelInputsInfo = ModelInputsInfo(
         unit="°C",
-        min=10.0,
-        max=40.0,
+        min=0.0,
+        max=60.0,
         step=0.1,
         value=25.0,
         name="Mean Radiant Temperature",
     )
     AIR_SPEED: ModelInputsInfo = ModelInputsInfo(
-        unit="m/s", min=0.0, max=1.0, step=0.1, value=0.1, name="Air Speed"
+        unit="m/s", min=0.0, max=3.0, step=0.1, value=0.5, name="Air Speed"
     )
     RH: ModelInputsInfo = ModelInputsInfo(
         unit="%", min=0.0, max=100.0, step=1.0, value=50.0, name="Relative Humidity"
     )
     MET: ModelInputsInfo = ModelInputsInfo(
-        unit="W/(m2)", min=0.7, max=2.0, step=0.1, value=1.2, name="Metabolic Rate"
+        unit="W/(m2)", min=100, max=450.0, step=0.1, value=200, name="Metabolic Rate"
     )
     CLOTHING: ModelInputsInfo = ModelInputsInfo(
-        unit="clo", min=0.5, max=2.0, step=0.1, value=0.5, name="Clothing"
+        unit="clo", min=0.1, max=1.0, step=0.1, value=0.5, name="Clothing"
     )
     POSTURE: ModelInputsInfo = ModelInputsInfo(
         unit="", min=1, max=3, step=1, value=1, name="Posture [sitting=1, standing=2, crouching=3]"
     )
     WME: ModelInputsInfo = ModelInputsInfo(
-        unit="W/(m2)", min=0, max=10.0, step=0.1, value=0, name="wme"
+        unit="W/(m2)", min=0, max=1000.0, step=0.1, value=0, name="wme"
     )
 
