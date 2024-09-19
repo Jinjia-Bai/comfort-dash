@@ -116,7 +116,9 @@ def t_rh_pmv(inputs: dict = None, model: str = "iso"):
     )
 
 
-def SET_outputs_chart(inputs: dict = None, calculate_ce: bool = False, p_atmospheric: int = 101325):
+def SET_outputs_chart(
+    inputs: dict = None, calculate_ce: bool = False, p_atmospheric: int = 101325
+):
     # Dry-bulb air temperature (x-axis)
     tdb_values = np.arange(10, 40, 0.5, dtype=float).tolist()
 
