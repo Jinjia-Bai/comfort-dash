@@ -6,7 +6,8 @@ import dash_mantine_components as dmc
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from pythermalcomfort.models import pmv, set_tmp, two_nodes
+from pythermalcomfort.models import pmv, set_tmp, two_nodes, JOS3
+from pythermalcomfort.psychrometrics import t_o
 from pythermalcomfort.utilities import v_relative, clo_dynamic
 from scipy import optimize
 
@@ -305,3 +306,90 @@ def SET_outputs_chart(
     return dmc.Image(
         src=f"data:image/png;base64,{img_base64}", alt="SET Outputs Chart", py=0
     )
+
+
+def thl_psychrometric_chart(inputs: dict = None, model: str = "ashrae"):
+    # Dry-bulb air temperature (x-axis)
+    tdb_values = np.arange(10, 40, 0.5, dtype=float).tolist()
+
+    # Prepare arrays for the outputs we want to plot
+    water_vapor_diffusion_through_the_skin_latent = []  # e_skin - e_sweat
+    evaporation_of_sweat_from_skin_surface_latent = []  # e_sweat
+    respiration_latent = []  # q_res_latent
+    respiration_sensible = []  # q_res_sensible
+    radiation_from_clothing_surface_sensible = []  # q_rad = hr * (Tclo - Tr)
+    convection_from_clothing_surface_sensible = []  # q_con = hc * (Tclo - Tdb)
+    total_sensible = []  # q_skin2env_sensible
+    total_latent = []  # q_skin2env_latent
+    total_heat_loss = []  # q_skin2env
+    metabolic_rate = []  # par
+
+    # Extract common input values
+    tr = float(inputs[ElementsIDs.t_r_input.value])
+    vr = float(
+        v_relative(  # Ensure vr is scalar
+            v=inputs[ElementsIDs.v_input.value], met=inputs[ElementsIDs.met_input.value]
+        )
+    )
+    rh = float(inputs[ElementsIDs.rh_input.value])  # Ensure rh is scalar
+    met = float(inputs[ElementsIDs.met_input.value])  # Ensure met is scalar
+    clo = float(
+        clo_dynamic(  # Ensure clo is scalar
+            clo=inputs[ElementsIDs.clo_input.value], met=met
+        )
+    )
+
+    # Compute the jos3 model results for each temperature
+    jos3_model = JOS3(
+        ex_output="all",
+    )
+    # jos3_model.tdb=tdb
+    jos3_model.tr = tr
+    # jos3_model.to=to
+    jos3_model.rh = rh
+    jos3_model.v = vr
+    jos3_model.clo = clo
+    jos3_model.par = met
+    jos3_model.posture = "standing"
+
+    for tdb in tdb_values:
+        # Calculate operative temperature (based on model chosen)
+        to = t_o(
+            tdb=tdb,
+            tr=tr,
+            v=vr,
+            standard=model,
+        )
+        jos3_model.tdb = tdb
+        jos3_model.to = to
+        jos3_result = jos3_model.dict_results()
+        for key in [
+            "e_skin",
+            "e_sweat",
+            "q_res_latent",
+            "q_res_sensible",
+            "q_skin2env_sensible",
+            "q_skin2env_latent",
+            "q_skin2env",
+            "par",
+        ]:
+            if key in jos3_result:
+                print(f"jos3 result for {key}")
+        # Extend the results for heat loss components
+        # water_vapor_diffusion_through_the_skin_latent.extend(map(float, jos3_result["e_skin"] - jos3_result["e_sweat"]))
+        # evaporation_of_sweat_from_skin_surface_latent.extend(map(float, jos3_result["e_sweat"]))
+        respiration_latent.extend(map(float, jos3_result["q_res_latent"]))
+        respiration_sensible.extend(map(float, jos3_result["q_res_sensible"]))
+        # total_sensible.extend(map(float, jos3_result["q_skin2env_sensible"]))
+        # total_latent.extend(map(float, jos3_result["q_skin2env_latent"]))
+        # total_heat_loss.extend(map(float, jos3_result["q_skin2env"]))
+        metabolic_rate.extend(map(float, jos3_result["par"]))
+        """
+        # Correct calculation for radiation and convection using clothing temperature Tclo
+        Tclo = jos3_result["t_clo"]  # Assuming t_clo is available in jos3_result
+        radiation_from_clothing_surface_sensible.extend(map(float, jos3_result["hr"] * (Tclo - tr)))
+        convection_from_clothing_surface_sensible.extend(map(float, jos3_result["hc"] * (Tclo - tdb)))
+        """
+    print("respiration latent list: ", respiration_latent)
+    print("respiration sensible list: ", respiration_sensible)
+    print("metabolic rate list: ", metabolic_rate)
