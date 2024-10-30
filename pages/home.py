@@ -36,6 +36,24 @@ from urllib.parse import parse_qs, urlencode
 
 dash.register_page(__name__, path=URLS.HOME.value)
 
+from functools import lru_cache
+
+@lru_cache(maxsize=512)
+def calculate_rh(hr, t_db):
+    vp = (hr * 101325) / 1000 / (0.62198 + hr / 1000)
+    rh = (vp / p_sat(t_db)) * 100
+    rh = max(0, min(rh, 100))
+    return rh
+
+@lru_cache(maxsize=512)
+def cached_psy_ta_rh(t_db, rh):
+    psy_results = psy_ta_rh(t_db, rh)
+    t_wb_value = psy_results.t_wb
+    t_dp_value = psy_results.t_dp
+    wa = psy_results.hr * 1000  # convert to g/kgda
+    h = psy_results.h / 1000  # convert to kj/kg
+    return t_wb_value, t_dp_value, wa, h
+
 layout = dmc.Stack(
     [
         dmc.Grid(
@@ -296,18 +314,12 @@ def update_hover_annotation(hover_data, figure, inputs):
             Charts.psychrometric.value.name,
         ]:
             hr = y_value
-            vp = (hr * 101325) / 1000 / (0.62198 + hr / 1000)
-            rh = (vp / p_sat(t_db)) * 100
-            rh = max(0, min(rh, 100))  # boundary check
+            rh = calculate_rh(hr, t_db)
         else:
             return figure
 
         # calculations
-        psy_results = psy_ta_rh(t_db, rh)
-        t_wb_value = psy_results.t_wb
-        t_dp_value = psy_results.t_dp
-        wa = psy_results.hr * 1000  # convert to g/kgda
-        h = psy_results.h / 1000  # convert to kj/kg
+        t_wb_value, t_dp_value, wa, h = cached_psy_ta_rh(t_db, rh)
 
         # Added unit judgment logic
         if units == UnitSystem.SI.value:
