@@ -38,14 +38,14 @@ dash.register_page(__name__, path=URLS.HOME.value)
 
 from functools import lru_cache
 
-@lru_cache(maxsize=512)
+@lru_cache(maxsize=256)
 def calculate_rh(hr, t_db):
     vp = (hr * 101325) / 1000 / (0.62198 + hr / 1000)
     rh = (vp / p_sat(t_db)) * 100
     rh = max(0, min(rh, 100))
     return rh
 
-@lru_cache(maxsize=512)
+@lru_cache(maxsize=256)
 def cached_psy_ta_rh(t_db, rh):
     psy_results = psy_ta_rh(t_db, rh)
     t_wb_value = psy_results.t_wb
